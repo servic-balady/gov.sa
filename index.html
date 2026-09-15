@@ -1,1 +1,430 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cockpit RC Controller</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: radial-gradient(circle at center, #141e30 0%, #080a0f 100%);
+      color: #fff;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      padding: 10px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.5);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ff4757;
+      box-shadow: 0 0 10px #ff4757;
+    }
+    .dot.online {
+      background: #2ed573;
+      box-shadow: 0 0 10px #2ed573;
+    }
+    .btn-connect {
+      background: linear-gradient(135deg, #0984e3, #00cec9);
+      color: #fff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* لوحة العداد الرقمي في المنتصف */
+    .dashboard-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .speedo-card {
+      background: rgba(0, 0, 0, 0.45);
+      border: 2px solid #2f3542;
+      border-radius: 16px;
+      padding: 12px 28px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(0,0,0,0.7);
+    }
+    .speed-number {
+      font-size: 52px;
+      font-weight: 900;
+      font-family: 'Courier New', monospace;
+      color: #00cec9;
+      text-shadow: 0 0 15px rgba(0, 206, 201, 0.6);
+      line-height: 1;
+    }
+    .speed-unit {
+      font-size: 13px;
+      color: #a4b0be;
+      letter-spacing: 2px;
+      margin-top: 4px;
+    }
+    .gear-state {
+      margin-top: 6px;
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 10px;
+      font-weight: bold;
+      font-size: 12px;
+      background: #3742fa;
+    }
+
+    .controls-area {
+      flex: 1;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 10px;
+    }
+
+    /* عجلة القيادة */
+    .wheel-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .wheel {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: #222733;
+      border: 10px solid #3d4455;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.9);
+      transition: transform 0.05s ease-out;
+    }
+    .wheel-core {
+      width: 65px;
+      height: 65px;
+      background: #11141a;
+      border-radius: 50%;
+      border: 3px solid #57606f;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      color: #70a1ff;
+      font-size: 12px;
+    }
+    .spoke-h {
+      position: absolute;
+      width: 100%;
+      height: 12px;
+      background: #3d4455;
+    }
+    .spoke-v {
+      position: absolute;
+      width: 12px;
+      height: 50%;
+      bottom: 0;
+      background: #3d4455;
+    }
+    .marker {
+      position: absolute;
+      top: 2px;
+      width: 10px;
+      height: 14px;
+      background: #ff4757;
+      border-radius: 2px;
+    }
+
+    /* مقبض الحركة والسرعة */
+    .throttle-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .throttle-rail {
+      width: 76px;
+      height: 250px;
+      background: #11141a;
+      border-radius: 38px;
+      border: 3px solid #3d4455;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.9);
+    }
+    .track-labels {
+      position: absolute;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 22px 0;
+      font-weight: bold;
+      font-size: 13px;
+      color: #747d8c;
+      pointer-events: none;
+    }
+    .throttle-handle {
+      position: absolute;
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #ff4757, #c0392b);
+      border-radius: 50%;
+      top: 93px; /* نقطة التوقف بالمنتصف */
+      border: 3px solid #ffffff;
+      box-shadow: 0 6px 16px rgba(255, 71, 87, 0.4);
+      cursor: grab;
+      transition: top 0.15s ease-out;
+    }
+
+    footer {
+      background: rgba(0, 0, 0, 0.5);
+      padding: 8px;
+      text-align: center;
+      font-family: monospace;
+      font-size: 14px;
+      color: #2ed573;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="status">
+      <div class="dot" id="dot"></div>
+      <span id="connLabel">غير متصل بالسيارة</span>
+    </div>
+    <button class="btn-connect" id="btnConnect">اتصال بالبلوتوث</button>
+  </header>
+
+  <!-- عداد السرعة الرقمي -->
+  <div class="dashboard-center">
+    <div class="speedo-card">
+      <div class="speed-number" id="speedDisplay">0</div>
+      <div class="speed-unit">KM / H</div>
+      <div class="gear-state" id="gearDisplay">توقف (N)</div>
+    </div>
+  </div>
+
+  <div class="controls-area">
+    <!-- عجلة القيادة -->
+    <div class="wheel-wrapper">
+      <div class="wheel" id="steeringWheel">
+        <div class="marker"></div>
+        <div class="spoke-h"></div>
+        <div class="spoke-v"></div>
+        <div class="wheel-core">RC CAR</div>
+      </div>
+      <span style="font-size: 14px; color: #a4b0be;">توجيه المسار</span>
+    </div>
+
+    <!-- مقبض الحركة والسرعة -->
+    <div class="throttle-wrapper">
+      <div class="throttle-rail" id="rail">
+        <div class="track-labels">
+          <span>▲ تسارع</span>
+          <span>● توقف</span>
+          <span>▼ رجوع</span>
+        </div>
+        <div class="throttle-handle" id="handle"></div>
+      </div>
+      <span style="font-size: 14px; color: #a4b0be;">مقبض السرعة</span>
+    </div>
+  </div>
+
+  <footer>
+    الأمر النشط المرسل: <span id="activeCmd">S</span>
+  </footer>
+
+  <script>
+    let port = null;
+    let writer = null;
+    let lastSent = 'S';
+
+    const btnConnect = document.getElementById('btnConnect');
+    const dot = document.getElementById('dot');
+    const connLabel = document.getElementById('connLabel');
+    const activeCmd = document.getElementById('activeCmd');
+    const speedDisplay = document.getElementById('speedDisplay');
+    const gearDisplay = document.getElementById('gearDisplay');
+
+    // كود الاتصال بالبلوتوث عبر Web Serial
+    btnConnect.addEventListener('click', async () => {
+      try {
+        if (!("serial" in navigator)) {
+          alert("المتصفح لا يدعم Web Serial. استخدم Google Chrome وتأكد من عمل الرابط بـ HTTPS");
+          return;
+        }
+        // طلب الاتصال بخدمة البلوتوث التسلسلية القياسية لـ HC-05
+        port = await navigator.serial.requestPort({
+          filters: [{ bluetoothServiceClassId: "00001101-0000-1000-8000-00805f9b34fb" }]
+        });
+        await port.open({ baudRate: 9600 });
+        writer = port.writable.getWriter();
+
+        dot.classList.add('online');
+        connLabel.innerText = "متصل بـ HC-05";
+        btnConnect.style.display = 'none';
+      } catch (err) {
+        alert("فشل الاتصال: " + err.message);
+      }
+    });
+
+    // إرسال الأوامر فوراً
+    async function sendCommand(cmd) {
+      if (cmd === lastSent) return;
+      lastSent = cmd;
+      activeCmd.innerText = cmd;
+
+      if (writer) {
+        try {
+          const enc = new TextEncoder();
+          await writer.write(enc.encode(cmd));
+        } catch (e) {
+          console.error("خطأ بالإرسال:", e);
+        }
+      }
+    }
+
+    // منطق عجلة القيادة
+    const wheel = document.getElementById('steeringWheel');
+    let wheelAngle = 0;
+    let wheelTouch = null;
+
+    function calcWheelAngle(x, y) {
+      const b = wheel.getBoundingClientRect();
+      const cx = b.left + b.width / 2;
+      const cy = b.top + b.height / 2;
+      const rad = Math.atan2(y - cy, x - cx);
+      let deg = rad * (180 / Math.PI) - 90;
+
+      while (deg < -180) deg += 360;
+      while (deg > 180) deg -= 360;
+      deg = Math.max(-70, Math.min(70, deg));
+
+      wheelAngle = deg;
+      wheel.style.transform = `rotate(${wheelAngle}deg)`;
+      updateDrive();
+    }
+
+    wheel.addEventListener('touchstart', (e) => {
+      wheelTouch = e.changedTouches[0].identifier;
+      calcWheelAngle(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+    });
+
+    // منطق مقبض الحركة ومؤشر السرعة
+    const rail = document.getElementById('rail');
+    const handle = document.getElementById('handle');
+    const centerPos = 93; // المنتصف
+    let throttleTouch = null;
+    let driveDir = 0; // 1 أمام, 0 توقف, -1 خلف
+    let currentSpeed = 0;
+
+    function calcThrottle(y) {
+      const b = rail.getBoundingClientRect();
+      let offset = y - b.top - 32;
+      offset = Math.max(8, Math.min(178, offset));
+      handle.style.top = `${offset}px`;
+
+      const diff = centerPos - offset; // موجب = للأعلى (أمام)، سالب = للأسفل (خلف)
+
+      if (diff > 15) {
+        driveDir = 1; // أمام
+        currentSpeed = Math.round((diff / (centerPos - 8)) * 100);
+        gearDisplay.innerText = "قيادة (D)";
+        gearDisplay.style.background = "#2ed573";
+      } else if (diff < -15) {
+        driveDir = -1; // خلف
+        currentSpeed = Math.round((Math.abs(diff) / (178 - centerPos)) * 40);
+        gearDisplay.innerText = "رجوع (R)";
+        gearDisplay.style.background = "#e74c3c";
+      } else {
+        driveDir = 0; // توقف
+        currentSpeed = 0;
+        gearDisplay.innerText = "توقف (N)";
+        gearDisplay.style.background = "#3742fa";
+      }
+
+      speedDisplay.innerText = currentSpeed;
+      updateDrive();
+    }
+
+    rail.addEventListener('touchstart', (e) => {
+      throttleTouch = e.changedTouches[0].identifier;
+      calcThrottle(e.changedTouches[0].clientY);
+    });
+
+    // متابعة حركة اللمس المتعدد
+    window.addEventListener('touchmove', (e) => {
+      for (let t of e.changedTouches) {
+        if (t.identifier === wheelTouch) calcWheelAngle(t.clientX, t.clientY);
+        if (t.identifier === throttleTouch) calcThrottle(t.clientY);
+      }
+    });
+
+    // رجوع المقود والمقبض للمنتصف تلقائياً للأمان عند الإفلات
+    window.addEventListener('touchend', (e) => {
+      for (let t of e.changedTouches) {
+        if (t.identifier === wheelTouch) {
+          wheelTouch = null;
+          wheelAngle = 0;
+          wheel.style.transform = `rotate(0deg)`;
+          updateDrive();
+        }
+        if (t.identifier === throttleTouch) {
+          throttleTouch = null;
+          driveDir = 0;
+          currentSpeed = 0;
+          speedDisplay.innerText = "0";
+          gearDisplay.innerText = "توقف (N)";
+          gearDisplay.style.background = "#3742fa";
+          handle.style.top = `${centerPos}px`;
+          updateDrive();
+        }
+      }
+    });
+
+    // تقييم الحركة وإرسال الأوامر المتوافقة مع كود الأردوينو
+    function updateDrive() {
+      if (driveDir === 1) {
+        if (wheelAngle > 22) sendCommand('R');
+        else if (wheelAngle < -22) sendCommand('L');
+        else sendCommand('F');
+      } else if (driveDir === -1) {
+        sendCommand('B');
+      } else {
+        if (wheelAngle > 30) sendCommand('R');
+        else if (wheelAngle < -30) sendCommand('L');
+        else sendCommand('S');
+      }
+    }
+  </script>
+</body>
+  </html>
 
